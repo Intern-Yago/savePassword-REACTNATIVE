@@ -1,46 +1,43 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { HapticTab } from '@/components/HapticTab';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#392de9',
+        tabBarInactiveTintColor: '#A0A0B2',
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
+        tabBarStyle: {
+          backgroundColor: '#161622',
+          borderTopColor: '#2A2A3C',
+          borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          paddingTop: 8,
+        },
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Gerador',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons size={size || 26} name="vpn-key" color={color} />
+          ),
         }}
-
       />
       <Tabs.Screen
         name="passwords"
         options={{
-          title: 'Passwords',
-          headerShown: false,
-          tabBarIcon: ({ color }) => <MaterialIcons size={28} name="password" color={color} />,
+          title: 'Minhas Senhas',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons size={size || 26} name="lock" color={color} />
+          ),
         }}
       />
     </Tabs>

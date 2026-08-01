@@ -1,98 +1,291 @@
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Pressable, TouchableOpacity, TextInput } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Clipboard from "expo-clipboard";
-import { View, Text, StyleSheet, Pressable, TouchableOpacity } from "react-native";
-import useStorage from '../../hooks/useStorage'
+import useStorage from '../../hooks/useStorage';
+import { calculatePasswordStrength } from "../../utils/security";
+import { SavedPassword } from "../../types/password";
 
-export function ModalPassword({password, handleClose}){
-    const {saveItem} = useStorage()
+interface ModalPasswordProps {
+  password: string;
+  handleClose: () => void;
+  onSavedSuccess?: () => void;
+  onCopySuccess?: () => void;
+}
 
-    async function handleCopyPassword(){
-        await Clipboard.setStringAsync(password)
-        await saveItem("@pass", password)
-        alert("Senha copiada!")
-        handleClose()
+export function ModalPassword({ password, handleClose, onSavedSuccess, onCopySuccess }: ModalPasswordProps) {
+  const { saveItem } = useStorage();
+  const [title, setTitle] = useState('');
+  const [totpSecret, setTotpSecret] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const strengthInfo = calculatePasswordStrength(password);
+
+  const handleCopyPassword = async () => {
+    await Clipboard.setStringAsync(password);
+    if (onCopySuccess) onCopySuccess();
+  };
+
+  const handleSavePassword = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      const defaultTitle = title.trim() || 'Nova Senha';
+      const newItem: SavedPassword = {
+        id: `pwd_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        title: defaultTitle,
+        password: password,
+        length: password.length,
+        strength: strengthInfo.strength,
+        createdAt: new Date().toISOString(),
+        totpSecret: totpSecret.trim() ? totpSecret.trim() : undefined,
+      };
+
+      await saveItem('@pass', newItem);
+      if (onSavedSuccess) onSavedSuccess();
+      handleClose();
+    } catch (err) {
+      console.error('Erro ao salvar:', err);
+    } finally {
+      setIsSaving(false);
     }
-    return(
-        <View style={styles.container}>
-            <View style={styles.content}>
-                <Text style={styles.title}>
-                    Senha gerada
-                </Text>
-                <Pressable style={styles.innerPassword} onLongPress={handleCopyPassword}>
-                    <Text style={styles.text}>
-                        {password}
-                    </Text>
-                </Pressable>
-                <View style={styles.buttonArea}>
-                    <TouchableOpacity style={styles.button} onPress={handleClose}>
-                        <Text style={styles.buttonText}>
-                            Voltar
-                        </Text>
-                    </TouchableOpacity>
+  };
 
-                    <TouchableOpacity style={[styles.button, styles.buttonSave]} onPress={async ()=>{await saveItem("@pass", password); handleClose() }}>
-                        <Text style={styles.buttonSaveText}>
-                            Salvar senha
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
+  return (
+    <View style={styles.container}>
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <MaterialIcons name="lock" size={24} color="#392de9" />
+          <Text style={styles.title}>Senha Gerada</Text>
         </View>
-    )
+
+        {/* Strength Indicator */}
+        <View style={styles.strengthContainer}>
+          <View style={styles.strengthHeader}>
+            <Text style={styles.strengthLabel}>Força da Senha:</Text>
+            <Text style={[styles.strengthBadge, { color: strengthInfo.color }]}>
+              {strengthInfo.label} ({strengthInfo.score}%)
+            </Text>
+          </View>
+          <View style={styles.track}>
+            <View
+              style={[
+                styles.bar,
+                { width: `${Math.max(10, strengthInfo.score)}%`, backgroundColor: strengthInfo.color },
+              ]}
+            />
+          </View>
+        </View>
+
+        {/* Title Input */}
+        <Text style={styles.inputLabel}>Título / Identificador (opcional):</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex: GitHub, Email, Instagram..."
+          placeholderTextColor="#6C6C8A"
+          value={title}
+          onChangeText={setTitle}
+          maxLength={30}
+        />
+
+        {/* 2FA Secret Key Input */}
+        <Text style={styles.inputLabel}>Chave Secreta 2FA / Autenticador (opcional):</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex: JBSWY3DPEHPK3PXP ou URL otpauth://"
+          placeholderTextColor="#6C6C8A"
+          value={totpSecret}
+          onChangeText={setTotpSecret}
+          autoCapitalize="characters"
+        />
+
+        {/* Password Display Box */}
+        <View style={styles.innerPassword}>
+          <Text style={styles.passwordText} numberOfLines={2}>
+            {isVisible ? password : '•'.repeat(password.length)}
+          </Text>
+          <TouchableOpacity
+            style={styles.eyeBtn}
+            onPress={() => setIsVisible(!isVisible)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialIcons
+              name={isVisible ? "visibility-off" : "visibility"}
+              size={22}
+              color="#A0A0B2"
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Pressable style={styles.copyQuickBtn} onPress={handleCopyPassword}>
+          <MaterialIcons name="content-copy" size={16} color="#392de9" />
+          <Text style={styles.copyQuickText}>Copiar para a área de transferência</Text>
+        </Pressable>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonArea}>
+          <TouchableOpacity style={styles.buttonCancel} onPress={handleClose}>
+            <Text style={styles.buttonCancelText}>Voltar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.buttonSave, isSaving && { opacity: 0.7 }]}
+            onPress={handleSavePassword}
+            disabled={isSaving}
+          >
+            <MaterialIcons name="bookmark" size={18} color="#FFF" style={{ marginRight: 6 }} />
+            <Text style={styles.buttonSaveText}>
+              {isSaving ? 'Salvando...' : 'Salvar Senha'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container:{
-        backgroundColor: "rgba(24,24,24,0.6)",
-        flex:1,
-        alignItems:'center',
-        justifyContent:'center',
-    },
-    content:{
-        backgroundColor:"#fff",
-        width:"85%",
-        alignItems:"center",
-        justifyContent:"center",
-        borderRadius:8,
-        paddingBottom:24,
-        paddingTop:24
-    },
-    title:{
-        fontSize:20,
-        fontWeight: 'bold',
-        color:"#000",
-        marginBottom:24
-    },
-    innerPassword:{
-        backgroundColor: "#0e0e0e",
-        width:"90%",
-        padding: 14,
-        borderRadius: 8
-    },
-    text:{
-        color:"#fff",
-        textAlign:'center'
-    },
-    buttonArea:{
-        flexDirection: 'row',
-        width:"90%",
-        marginTop:8,
-        justifyContent:"space-between",
-        alignItems:"center"
-    },
-    button:{
-        flex:1,
-        alignItems:"center",
-        marginTop:14,
-        marginBottom:14,
-        padding:8
-    },
-    buttonSave:{
-        backgroundColor:"#392de9",
-        borderRadius:8,
-        
-    },
-    buttonSaveText:{
-        color:"#fff",
-        fontWeight:"bold"
-    }
-})
+  container: {
+    backgroundColor: "rgba(10, 10, 16, 0.75)",
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  content: {
+    backgroundColor: "#1E1E2C",
+    width: "100%",
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#2A2A3C',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: "#FFFFFF",
+    marginLeft: 8,
+  },
+  strengthContainer: {
+    marginBottom: 16,
+  },
+  strengthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  strengthLabel: {
+    color: '#A0A0B2',
+    fontSize: 12,
+  },
+  strengthBadge: {
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  track: {
+    height: 6,
+    backgroundColor: '#12121A',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  bar: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  inputLabel: {
+    color: '#A0A0B2',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  input: {
+    backgroundColor: '#12121A',
+    color: '#FFF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: '#2A2A3C',
+    marginBottom: 12,
+  },
+  innerPassword: {
+    backgroundColor: "#12121A",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#392de940',
+    marginTop: 4,
+  },
+  passwordText: {
+    color: "#00FFAD",
+    fontSize: 16,
+    fontFamily: 'SpaceMono',
+    flex: 1,
+    marginRight: 8,
+  },
+  eyeBtn: {
+    padding: 4,
+  },
+  copyQuickBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 6,
+  },
+  copyQuickText: {
+    color: '#392de9',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  buttonArea: {
+    flexDirection: 'row',
+    marginTop: 16,
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  buttonCancel: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#2A2A3C',
+  },
+  buttonCancelText: {
+    color: '#A0A0B2',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  buttonSave: {
+    flex: 1.5,
+    flexDirection: 'row',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#392de9",
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  buttonSaveText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+});
