@@ -1,0 +1,58 @@
+name: Expo EAS Build & GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    name: Build Android APK & Publish GitHub Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci
+
+      - name: 🚀 Setup Expo & EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🔨 Build Android APK with EAS
+        id: build
+        run: |
+          # Executa o build de APK Android no EAS (Cloud Expo)
+          eas build --platform android --profile preview --non-interactive --json > build-output.json
+          
+          # Extrai o URL de download do APK gerado
+          BUILD_URL=$(jq -r '.[0].artifacts.buildUrl' build-output.json)
+          echo "APK_URL=$BUILD_URL" >> $GITHUB_ENV
+          
+          # Baixa o APK compilado
+          curl -L -o savePassword.apk "$BUILD_URL"
+
+      - name: 🏷️ Publish GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          files: savePassword.apk
+          name: Release ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
