@@ -5,6 +5,13 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Semantic Versioning (SemVer)](https://semver.org/lang/pt-BR/).
 
+## [1.1.5] - 2026-08-01
+
+### Fixed
+- **Compilação Gradle Android (EAS Build)**: Adicionado `expo-build-properties` com `kotlinVersion: 1.9.25` para compatibilidade com o Jetpack Compose Compiler em `expo-modules-core`.
+- **Prebuild Asset Dimensions**: Redimensionados `icon.png` e `adaptive-icon.png` para quadrados 1:1 de `512x512`.
+- **Alinhamento do Expo SDK 52**: Atualizadas dependências `react-native`, `expo-router` e `expo-system-ui` para compatibilidade total.
+
 ## [1.1.0] - 2026-08-01
 
 ### Added
