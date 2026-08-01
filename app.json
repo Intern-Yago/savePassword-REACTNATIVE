@@ -38,17 +38,17 @@
       ],
       "expo-secure-store",
       "expo-camera",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
-        }
-      ],
+      "@react-native-google-signin/google-signin",
       "expo-asset",
       "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "87d317ae-e09c-4b1c-8b23-cf3752c39594"
+      }
     }
   }
 }
