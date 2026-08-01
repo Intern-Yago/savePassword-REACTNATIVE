@@ -36,10 +36,13 @@ jobs:
       - name: 🔨 Build Android APK with EAS
         id: build
         run: |
+          # Garante a inicialização do projeto no EAS
+          eas init --account syri_cotocs --non-interactive || true
+          
           # Executa o build de APK Android no EAS (Cloud Expo)
           eas build --platform android --profile preview --non-interactive --json > build-output.json
           
-          # Extrai o URL de download do APK gerado
+          # Extrai a URL de download do APK gerado
           BUILD_URL=$(jq -r '.[0].artifacts.buildUrl' build-output.json)
           echo "APK_URL=$BUILD_URL" >> $GITHUB_ENV
           
